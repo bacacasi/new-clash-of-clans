@@ -20,10 +20,10 @@ class GameMap:
             sprite_key = building.building_type_key
             sprite = assets_module.get_building_sprite(sprite_key, tile_size)
 
-            if sprite:
-                pixel_x = building.x_grid * tile_size
-                pixel_y = building.y_grid * tile_size
+            pixel_x = building.x_grid * tile_size
+            pixel_y = building.y_grid * tile_size
 
+            if sprite:
                 sprite_w, sprite_h = sprite.get_size()
                 offset_x = (tile_size - sprite_w) // 2
                 offset_y = (tile_size - sprite_h) // 2
@@ -32,29 +32,30 @@ class GameMap:
 
                 surface.blit(sprite, (sprite_draw_pos_x, sprite_draw_pos_y))
 
-                # Health bar settings
-                bar_width = tile_size * 0.8
-                bar_height = 6 # pixels
-                # Position health bar above the sprite.
-                # Use sprite_draw_pos_y as reference, then move further up.
-                bar_offset_y = - (bar_height + 3) # Place above the top of the tile by a few pixels
+            # Selection Highlight
+            if building.selected:
+                selection_rect = pygame.Rect(pixel_x, pixel_y, tile_size, tile_size)
+                pygame.draw.rect(surface, config.CYAN, selection_rect, 3) # Cyan border, 3px thick
 
-                health_bar_x = pixel_x + (tile_size - bar_width) // 2 # Centered within the tile
-                health_bar_y = pixel_y + bar_offset_y # Positioned relative to the top of the tile
+            # Health bar (drawn on top of selection highlight if building is selected)
+            if hasattr(building, 'health') and hasattr(building, 'max_health'): # Check if building has health attrs
+                bar_width = tile_size * 0.8
+                bar_height = 6
+                bar_offset_y = - (bar_height + 3)
+
+                health_bar_x = pixel_x + (tile_size - bar_width) // 2
+                health_bar_y = pixel_y + bar_offset_y
 
                 if building.max_health > 0:
-                    health_ratio = building.health / building.max_health
+                    health_ratio = max(0, min(1, building.health / building.max_health)) # Ensure ratio is between 0 and 1
                 else:
                     health_ratio = 0
 
                 current_health_width = bar_width * health_ratio
 
-                # Draw health bar background (e.g., red or dark grey)
                 pygame.draw.rect(surface, config.RED, (health_bar_x, health_bar_y, bar_width, bar_height))
-                # Draw current health (e.g., green)
                 if current_health_width > 0:
                     pygame.draw.rect(surface, config.GREEN, (health_bar_x, health_bar_y, current_health_width, bar_height))
-                # Optional: Draw a border for the health bar
                 pygame.draw.rect(surface, config.BLACK, (health_bar_x, health_bar_y, bar_width, bar_height), 1)
 
 
@@ -78,21 +79,20 @@ if __name__ == '__main__':
     from buildings import Building
 
     screen_width = config.MAP_WIDTH * config.TILE_SIZE
-    screen_height = config.MAP_HEIGHT * config.TILE_SIZE # Test map only, no UI panel
+    screen_height = config.MAP_HEIGHT * config.TILE_SIZE
     screen = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("GameMap Draw Test with Health Bars")
+    pygame.display.set_caption("GameMap Draw Test with Selection & Health Bars")
 
     game_map = GameMap(config.MAP_WIDTH, config.MAP_HEIGHT)
 
     sample_buildings = []
-    # Player building with full health
     player_th = Building(x_grid=3, y_grid=3, building_type_key="town_hall", owner="Player", health=500, max_health=500)
+    player_th.selected = True # Test selection
     sample_buildings.append(player_th)
-    # Player building with partial health
+
     player_mine = Building(x_grid=5, y_grid=2, building_type_key="gold_mine", owner="Player", health=100, max_health=200)
     sample_buildings.append(player_mine)
-    # AI building (assuming "ai_town_hall" key exists in assets and has some default health if not specified)
-    # For this test, explicitly set health and max_health for AI building too.
+
     ai_th = Building(x_grid=config.MAP_WIDTH - 4, y_grid=config.MAP_HEIGHT - 4,
                      building_type_key="ai_town_hall", owner="AI", health=300, max_health=600)
     sample_buildings.append(ai_th)
@@ -108,4 +108,4 @@ if __name__ == '__main__':
         pygame.display.flip()
 
     pygame.quit()
-    print("GameMap draw test with health bars finished.")
+    print("GameMap draw test with selection and health bars finished.")
