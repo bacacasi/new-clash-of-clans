@@ -47,9 +47,9 @@ class Game:
             "ai_barracks": {"cost": {"gold": 0}, "asset_key": "ai_barracks", "name": "AI Barracks", "max_health": 300, "can_train_units": True},
         }
         self.UNIT_TRAINING_INFO = {
-            "barbarian": {"cost": {"elixir": 25}, "asset_key": "barbarian", "display_name": "Barbarian", "required_building": "barracks", "health":50, "attack_power":10, "speed": 2.0, "attack_rate": 60},
-            "archer": {"cost": {"elixir": 50}, "asset_key": "archer", "display_name": "Archer", "required_building": "barracks", "health":30, "attack_power":7, "speed": 1.5, "attack_rate": 45},
-            "ai_barbarian": {"cost": {"elixir": 0}, "asset_key": "ai_barbarian", "display_name": "AI Barb", "required_building": "ai_barracks", "health":50, "attack_power":10, "speed": 2.0, "attack_rate": 60},
+            "barbarian": {"cost": {"elixir": 25}, "asset_key": "barbarian", "display_name": "Barbarian", "required_building": "barracks", "health":50, "attack_power":10, "speed": 2.0, "attack_rate": 60, "attack_range": 1.5},
+            "archer": {"cost": {"elixir": 50}, "asset_key": "archer", "display_name": "Archer", "required_building": "barracks", "health":30, "attack_power":7, "speed": 1.5, "attack_rate": 45, "attack_range": 4},
+            "ai_barbarian": {"cost": {"elixir": 0}, "asset_key": "ai_barbarian", "display_name": "AI Barb", "required_building": "ai_barracks", "health":50, "attack_power":10, "speed": 2.0, "attack_rate": 60, "attack_range": 1.5},
         }
 
         self.ui_buttons = []
@@ -123,7 +123,7 @@ class Game:
                 action_key = f"train_{unit_type}"; button_text = f"Train {details['display_name']}"
                 tt_lines = [f"{details['display_name']}"];
                 for res, amount in details['cost'].items(): tt_lines.append(f"  {res.capitalize()}: {amount}")
-                tt_lines.append(f"  HP: {details['health']}, ATK: {details['attack_power']}")
+                tt_lines.append(f"  HP: {details['health']}, ATK: {details['attack_power']}, Range: {details.get('attack_range', 1)}")
                 btn = Button(current_x, self.ui_panel_y_start + padding, button_width, button_height, button_text, action_key, self.font, tooltip_text_lines=tt_lines)
                 self.unit_train_buttons.append(btn); current_x += button_width + padding
 
@@ -155,11 +155,11 @@ class Game:
         player_barracks = next((b for b in self.buildings if b.building_type_key == "barracks"), None)
         player_spawn_pos = self._get_spawn_position("Player", player_barracks)
         p_barb_stats = self.UNIT_TRAINING_INFO["barbarian"]
-        self.units.append(Unit(player_spawn_pos[0], player_spawn_pos[1], p_barb_stats["asset_key"], "Player", health=p_barb_stats["health"], attack_power=p_barb_stats["attack_power"], speed=p_barb_stats["speed"], attack_rate=p_barb_stats["attack_rate"]))
+        self.units.append(Unit(player_spawn_pos[0], player_spawn_pos[1], p_barb_stats["asset_key"], "Player", health=p_barb_stats["health"], attack_power=p_barb_stats["attack_power"], speed=p_barb_stats["speed"], attack_rate=p_barb_stats["attack_rate"], attack_range=p_barb_stats["attack_range"]))
         ai_barracks = next((b for b in self.ai_buildings if b.building_type_key == "ai_barracks"), None)
         ai_spawn_pos = self._get_spawn_position("AI", ai_barracks)
         ai_barb_stats = self.UNIT_TRAINING_INFO["ai_barbarian"]
-        self.ai_units.append(Unit(ai_spawn_pos[0], ai_spawn_pos[1], ai_barb_stats["asset_key"], "AI", health=ai_barb_stats["health"], attack_power=ai_barb_stats["attack_power"], speed=ai_barb_stats["speed"], attack_rate=ai_barb_stats["attack_rate"]))
+        self.ai_units.append(Unit(ai_spawn_pos[0], ai_spawn_pos[1], ai_barb_stats["asset_key"], "AI", health=ai_barb_stats["health"], attack_power=ai_barb_stats["attack_power"], speed=ai_barb_stats["speed"], attack_rate=ai_barb_stats["attack_rate"], attack_range=ai_barb_stats["attack_range"]))
 
     def place_building(self, grid_x, grid_y, building_type_key_from_action, owner="Player", is_initial_sample=False): # ... (no change from previous step where messages were added)
         lookup_key = building_type_key_from_action
@@ -193,7 +193,7 @@ class Game:
             if self.player_resources.get(res, 0) < amt: self._play_sound("action_error"); self.add_game_message(f"Not enough {res} for {details['display_name']}", config.RED, msg_id="resource_error"); return
         for res, amt in cost.items(): self.player_resources[res] -= amt
         spawn_pos = self._get_spawn_position("Player", self.selected_building)
-        new_unit = Unit(spawn_pos[0], spawn_pos[1], details["asset_key"], "Player", health=details["health"], attack_power=details["attack_power"], speed=details["speed"], attack_rate=details["attack_rate"])
+        new_unit = Unit(spawn_pos[0], spawn_pos[1], details["asset_key"], "Player", health=details["health"], attack_power=details["attack_power"], speed=details["speed"], attack_rate=details["attack_rate"], attack_range=details["attack_range"])
         self.units.append(new_unit); self._play_sound("unit_trained"); self.add_game_message(f"{details['display_name']} trained!", config.GREEN)
 
     def run(self): # ... (no change)

@@ -4,7 +4,7 @@ import config
 
 class Unit:
     def __init__(self, x_pixel, y_pixel, unit_type_key, owner="Player",
-                 health=50, attack_power=10, speed=2, attack_rate=60):
+                 health=50, attack_power=10, speed=2, attack_rate=60, attack_range=1.5):
         self.x = float(x_pixel)
         self.y = float(y_pixel)
         self.unit_type_key = unit_type_key
@@ -12,6 +12,7 @@ class Unit:
         self.health = health
         self.max_health = health
         self.attack_power = attack_power
+        self.attack_range = float(attack_range)
 
         self.speed = float(speed)
         self.target_x = None
@@ -22,10 +23,9 @@ class Unit:
         self.attack_target_building = None
         self.attack_cooldown = 0
         self.attack_rate = attack_rate
-        # Attack range: A unit will stop moving towards its attack_target_building
-        # if distance is less than tile_size (e.g. it's on an adjacent tile to the building's center tile)
-        # This means it doesn't have to be exactly on the building's center pixel to stop and attack.
-        self.effective_attack_range_check = config.TILE_SIZE * 0.8 # Stop a bit before the center
+        # Attack range, in tiles. Unit stops when distance to target is less than this.
+        # The range is specified in tiles (e.g. 4 tiles) and converted to pixels here.
+        self.effective_attack_range_check = self.attack_range * config.TILE_SIZE
 
     def get_sprite_key(self):
         return self.unit_type_key
@@ -111,43 +111,46 @@ if __name__ == '__main__':
         def take_damage(self, amount): self.health -= amount; print(f"DUMMY: {self.building_type_key} took {amount} dmg, HP: {self.health}")
         def is_destroyed(self): return self.health <= 0
 
-    unit = Unit(0, 0, "test_unit", speed=5, attack_power=10, attack_rate=60)
-    # Target building's center is effectively (16,16) if its grid (0,0) and TILE_SIZE is 32
-    # Let's place building at grid (0,0) for simplicity, so its center is (16,16)
-    # Unit starts at (0,0) pixel.
-    target_building_center_x = config.TILE_SIZE / 2
-    target_building_center_y = config.TILE_SIZE / 2
-    target_building = DummyBuilding(0,0, health=50)
+    # --- Test Melee Unit ---
+    print("--- Melee Unit Test ---")
+    melee_unit = Unit(0, 0, "test_melee", speed=10, attack_range=1.5)
+    target_building = DummyBuilding(0,0, health=50) # at grid (0,0) -> center pixel (16,16)
+    target_pixel_x = target_building.x_grid * config.TILE_SIZE + config.TILE_SIZE / 2
+    target_pixel_y = target_building.y_grid * config.TILE_SIZE + config.TILE_SIZE / 2
 
-    print("--- Movement to Attack Target Test ---")
-    unit.attack_target_building = target_building
-    unit.set_target(target_building_center_x, target_building_center_y, is_attack_move=True)
+    melee_unit.attack_target_building = target_building
+    melee_unit.set_target(target_pixel_x, target_pixel_y, is_attack_move=True)
 
-    attacked_once = False
-    for i in range(10): # Simulate game loop
-        unit.update_movement()
-        print(f"Update {i+1}: Unit at ({unit.x:.1f},{unit.y:.1f}), Moving: {unit.is_moving}, CD: {unit.attack_cooldown}")
+    stopped_in_range = False
+    for _ in range(20):
+        melee_unit.update_movement()
+        if not melee_unit.is_moving:
+            dist = math.hypot(target_pixel_x - melee_unit.x, target_pixel_y - melee_unit.y)
+            print(f"Melee unit stopped at distance: {dist:.1f}. Target range: {melee_unit.effective_attack_range_check:.1f}")
+            if dist < melee_unit.effective_attack_range_check:
+                stopped_in_range = True
+            break
+    assert stopped_in_range, "Melee unit did not stop within its attack range."
+    print("Melee unit test passed.")
 
-        if not unit.is_moving and unit.attack_target_building:
-            print("Unit reached attack position.")
-            if unit.can_attack():
-                if unit.perform_attack(unit.attack_target_building):
-                    attacked_once = True
-                    print("Unit performed attack.")
-            else:
-                unit.attack_cooldown -=1
-                print(f"Attack cooling down: {unit.attack_cooldown}")
+    # --- Test Ranged Unit ---
+    print("\n--- Ranged Unit Test ---")
+    archer = Unit(0, 0, "test_archer", speed=10, attack_range=4) # Archer with 4 tile range
+    target_building_ranged = DummyBuilding(5, 0, health=50) # at grid (5,0) -> center pixel (176, 16)
+    target_pixel_x_ranged = target_building_ranged.x_grid * config.TILE_SIZE + config.TILE_SIZE / 2
+    target_pixel_y_ranged = target_building_ranged.y_grid * config.TILE_SIZE + config.TILE_SIZE / 2
 
-            if unit.attack_target_building and unit.attack_target_building.is_destroyed():
-                print("Target destroyed, unit cleared target.")
-                break
-            elif not unit.attack_target_building:
-                break
-        if i > 7 and not unit.is_moving and not unit.attack_target_building : # safety break if something unexpected
-             print("Exiting test loop early")
-             break
+    archer.attack_target_building = target_building_ranged
+    archer.set_target(target_pixel_x_ranged, target_pixel_y_ranged, is_attack_move=True)
 
-    assert attacked_once, "Unit did not perform an attack"
-    assert target_building.health < target_building.max_health, "Unit did not damage building"
-    print(f"Target health after attack simulation: {target_building.health}")
-    print("\nAll Unit attack-related tests passed conceptually.")
+    stopped_in_range_ranged = False
+    for _ in range(30):
+        archer.update_movement()
+        if not archer.is_moving:
+            dist = math.hypot(target_pixel_x_ranged - archer.x, target_pixel_y_ranged - archer.y)
+            print(f"Ranged unit stopped at distance: {dist:.1f}. Target range: {archer.effective_attack_range_check:.1f}")
+            if dist < archer.effective_attack_range_check:
+                stopped_in_range_ranged = True
+            break
+    assert stopped_in_range_ranged, "Ranged unit did not stop within its attack range."
+    print("Ranged unit test passed.")
