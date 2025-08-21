@@ -5,6 +5,7 @@ import config
 from game_map import GameMap
 from buildings import Building
 from units import Unit
+from projectiles import Projectile
 import assets
 from ui_elements import Button
 
@@ -67,6 +68,7 @@ class Game:
 
         self.game_messages = []
         self.attack_visual_effects = [] # For hit sparks, etc.
+        self.projectiles = []
 
 
         self.sounds = {}
@@ -323,15 +325,23 @@ class Game:
                 if unit.can_attack():
                     if unit.perform_attack(unit.attack_target_building): # perform_attack returns True if attack happened
                         self._play_sound("unit_attack")
-                        # Add visual effect
                         target_b = unit.attack_target_building
-                        effect_pos_x = target_b.x_grid * self.tile_size + self.tile_size // 2
-                        effect_pos_y = target_b.y_grid * self.tile_size + self.tile_size // 2
-                        self.attack_visual_effects.append({
-                            "pos": (effect_pos_x, effect_pos_y),
-                            "timer": config.FPS // 6, # Short duration (e.g., 10 frames)
-                            "color": config.YELLOW # Or a specific attack color
-                        })
+                        target_pos_x = target_b.x_grid * self.tile_size + self.tile_size // 2
+                        target_pos_y = target_b.y_grid * self.tile_size + self.tile_size // 2
+
+                        # If archer, create a projectile. Otherwise, create a hit spark.
+                        if unit.unit_type_key == 'archer':
+                            # Arrow color can be customized, e.g. brown
+                            arrow_color = (139, 69, 19)
+                            self.projectiles.append(Projectile(unit.x, unit.y, target_pos_x, target_pos_y, color=arrow_color))
+                        else:
+                            # Melee units get the instant hit spark effect
+                            self.attack_visual_effects.append({
+                                "pos": (target_pos_x, target_pos_y),
+                                "timer": config.FPS // 6, # Short duration (e.g., 10 frames)
+                                "color": config.YELLOW # Or a specific attack color
+                            })
+
                         if target_b.is_destroyed(): # Check again after attack
                             self.add_game_message(f"AI's {target_b.building_type_key} destroyed!", config.GREEN)
                             # Unit's perform_attack already clears its own target if building is destroyed
@@ -344,6 +354,11 @@ class Game:
         self.attack_visual_effects = [effect for effect in self.attack_visual_effects if effect["timer"] > 0]
         for effect in self.attack_visual_effects:
             effect["timer"] -= 1
+
+        # Update projectiles
+        for p in self.projectiles[:]:
+            if p.update():
+                self.projectiles.remove(p)
 
         self.ai_buildings = [b for b in self.ai_buildings if not b.is_destroyed()]
 
@@ -391,6 +406,10 @@ class Game:
             radius = effect["timer"] * 1.5 # Radius shrinks as timer goes down, make it a bit larger
             if radius > 1: # Only draw if radius is somewhat visible
                 pygame.draw.circle(self.screen, effect["color"], (int(effect["pos"][0]), int(effect["pos"][1])), int(radius))
+
+        # Render projectiles
+        for p in self.projectiles:
+            p.draw(self.screen)
 
         # UI Panel ... (no change)
         pygame.draw.rect(self.screen, config.UI_BG_COLOR, (0, self.ui_panel_y_start, config.SCREEN_WIDTH, config.UI_PANEL_HEIGHT))
