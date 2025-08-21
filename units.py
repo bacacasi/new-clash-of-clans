@@ -1,5 +1,6 @@
 # units.py
 import math # For vector calculations, distance
+import config
 
 class Unit:
     def __init__(self, x_pixel, y_pixel, unit_type_key, owner="Player",
