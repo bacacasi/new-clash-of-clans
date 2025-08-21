@@ -326,9 +326,11 @@ class Game:
 
             if unit.attack_target_building and not unit.is_moving: # If has target and is in range (not moving)
                 if unit.can_attack():
-                    if unit.perform_attack(unit.attack_target_building): # perform_attack returns True if attack happened
+                    # Capture target before the attack, as perform_attack can clear it
+                    target_b = unit.attack_target_building
+                    if unit.perform_attack(target_b): # perform_attack returns True if attack happened
                         self._play_sound("unit_attack")
-                        target_b = unit.attack_target_building
+
                         target_pos_x = target_b.x_grid * self.tile_size + self.tile_size // 2
                         target_pos_y = target_b.y_grid * self.tile_size + self.tile_size // 2
 
