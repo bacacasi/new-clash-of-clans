@@ -21,6 +21,7 @@ class Unit:
         self.selected = False
 
         self.attack_target_building = None
+        self.attack_target_unit = None
         self.attack_cooldown = 0
         self.attack_rate = attack_rate
         # Attack range, in tiles. Unit stops when distance to target is less than this.
@@ -40,8 +41,14 @@ class Unit:
         self.is_moving = True
         if not is_attack_move:
             self.attack_target_building = None
+            self.attack_target_unit = None
 
     def update_movement(self):
+        # If unit is attacking a dynamic target (a unit), update target coordinates
+        if self.attack_target_unit:
+            self.target_x = self.attack_target_unit.x
+            self.target_y = self.attack_target_unit.y
+
         if not self.is_moving or self.target_x is None or self.target_y is None:
             return
 
@@ -50,22 +57,19 @@ class Unit:
         distance = math.hypot(dx, dy)
 
         # If unit has an attack target, check if it's close enough to stop moving and start attacking
-        if self.attack_target_building:
-            # Consider a slightly larger range for stopping than for attacking, to prevent jittering
-            # Or use a fixed range like one tile_size.
-            # If the target is the building's center, effective_attack_range_check should be small.
-            # If target is building edge, then range check is different.
-            # For now, target is building center, stop if within ~0.8 of a tile.
+        attack_target = self.attack_target_building or self.attack_target_unit
+        if attack_target:
             if distance < self.effective_attack_range_check:
                 self.is_moving = False
-                # Keep target_x, target_y as they point to the building center for attack orientation (if needed later)
+                # Keep target_x, target_y as they point to the target for attack orientation
                 return
 
         if distance < self.speed:
             self.x = self.target_x
             self.y = self.target_y
             self.is_moving = False
-            if not self.attack_target_building: # Clear non-attack targets
+            # Clear non-attack move targets upon arrival
+            if not (self.attack_target_building or self.attack_target_unit):
                 self.target_x = None
                 self.target_y = None
         else:
@@ -78,20 +82,31 @@ class Unit:
     def can_attack(self):
         return self.attack_cooldown <= 0
 
-    def perform_attack(self, target_building):
+    def take_damage(self, amount):
+        if amount <= 0: return
+        self.health -= amount
+        if self.health <= 0:
+            self.health = 0
+
+    def is_destroyed(self):
+        return self.health <= 0
+
+    def perform_attack(self, target):
         # This method is called by Game class after checking if unit.can_attack() is true
-        # and if target_building is still valid.
-        if not target_building or target_building.is_destroyed(): # Double check
-            self.attack_target_building = None # Clear invalid target
+        # and if the target is still valid.
+        if not target or target.is_destroyed(): # Double check
+            self.attack_target_building = None
+            self.attack_target_unit = None
             return False # No attack made
 
-        # print(f"{self.owner}'s {self.unit_type_key} attacks {target_building.owner}'s {target_building.building_type_key}!") # Debug
-        target_building.take_damage(self.attack_power)
+        # print(f"{self.owner}'s {self.unit_type_key} attacks target!") # Debug
+        target.take_damage(self.attack_power)
         self.attack_cooldown = self.attack_rate # Reset cooldown
 
-        if target_building.is_destroyed():
-            # print(f"{target_building.building_type_key} destroyed by {self.unit_type_key}") # Debug
+        if target.is_destroyed():
+            # print(f"Target destroyed by {self.unit_type_key}") # Debug
             self.attack_target_building = None
+            self.attack_target_unit = None
             self.is_moving = False
             self.target_x = None
             self.target_y = None

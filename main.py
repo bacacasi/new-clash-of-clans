@@ -283,16 +283,37 @@ class Game:
                 elif event.button == 3:
                     if self.current_build_action: self.current_build_action = None; self.ghost_sprite = None; self._play_sound("action_error")
                     elif self.selected_units:
+                        # Prioritize targeting buildings, then units, then move
                         target_building = None
                         if grid_y_mouse < config.MAP_HEIGHT:
                             for b in self.ai_buildings:
-                                if b.x_grid == grid_x_mouse and b.y_grid == grid_y_mouse: target_building = b; break
+                                if b.x_grid == grid_x_mouse and b.y_grid == grid_y_mouse:
+                                    target_building = b
+                                    break
+
+                        target_unit = None
+                        if not target_building:
+                            for u in self.ai_units:
+                                unit_sprite = assets.get_unit_sprite(u.unit_type_key, self.tile_size)
+                                if unit_sprite:
+                                    sprite_w, sprite_h = unit_sprite.get_size()
+                                    unit_rect = pygame.Rect(u.x - sprite_w//2, u.y - sprite_h//2, sprite_w, sprite_h)
+                                    if unit_rect.collidepoint(mouse_pos):
+                                        target_unit = u
+                                        break
+
                         for unit in self.selected_units:
                             if target_building:
                                 unit.attack_target_building = target_building
+                                unit.attack_target_unit = None
                                 unit.set_target(target_building.x_grid * self.tile_size + self.tile_size // 2, target_building.y_grid * self.tile_size + self.tile_size // 2, is_attack_move=True)
+                            elif target_unit:
+                                unit.attack_target_unit = target_unit
+                                unit.attack_target_building = None
+                                unit.set_target(target_unit.x, target_unit.y, is_attack_move=True)
                             else:
                                 unit.attack_target_building = None
+                                unit.attack_target_unit = None
                                 unit.set_target(mouse_pos[0], mouse_pos[1], is_attack_move=False)
                     elif self.selected_building: self.selected_building.selected = False; self.selected_building = None; self.unit_train_buttons.clear()
             elif event.type == pygame.KEYDOWN:
@@ -314,46 +335,48 @@ class Game:
             if msg["timer"] > 0: new_messages.append(msg)
         self.game_messages = new_messages
 
-        for unit in self.units: # Player units
+        all_units = self.units + self.ai_units
+        for unit in all_units:
             # Target validity check
-            if unit.attack_target_building and unit.attack_target_building not in self.ai_buildings:
-                unit.attack_target_building = None # Target was destroyed or removed
-                unit.is_moving = False # Stop unit
-                unit.target_x, unit.target_y = None, None
+            if unit.attack_target_building and (unit.attack_target_building.is_destroyed() or (unit.attack_target_building not in self.buildings and unit.attack_target_building not in self.ai_buildings)):
+                unit.attack_target_building = None
+            if unit.attack_target_unit and (unit.attack_target_unit.is_destroyed() or (unit.attack_target_unit not in self.units and unit.attack_target_unit not in self.ai_units)):
+                unit.attack_target_unit = None
 
+            unit.update_movement()
 
-            unit.update_movement() # Update position based on target
-
-            if unit.attack_target_building and not unit.is_moving: # If has target and is in range (not moving)
+            attack_target = unit.attack_target_building or unit.attack_target_unit
+            if attack_target and not unit.is_moving:
                 if unit.can_attack():
-                    # Capture target before the attack, as perform_attack can clear it
-                    target_b = unit.attack_target_building
-                    if unit.perform_attack(target_b): # perform_attack returns True if attack happened
+                    if unit.perform_attack(attack_target):
                         self._play_sound("unit_attack")
 
-                        target_pos_x = target_b.x_grid * self.tile_size + self.tile_size // 2
-                        target_pos_y = target_b.y_grid * self.tile_size + self.tile_size // 2
+                        # Determine target position for visual effects
+                        if isinstance(attack_target, Building):
+                            target_pos_x = attack_target.x_grid * self.tile_size + self.tile_size // 2
+                            target_pos_y = attack_target.y_grid * self.tile_size + self.tile_size // 2
+                        else: # It's a Unit
+                            target_pos_x = attack_target.x
+                            target_pos_y = attack_target.y
 
                         # If archer, create a projectile. Otherwise, create a hit spark.
                         if unit.unit_type_key == 'archer':
-                            # Arrow color can be customized, e.g. brown
                             arrow_color = (139, 69, 19)
                             self.projectiles.append(Projectile(unit.x, unit.y, target_pos_x, target_pos_y, color=arrow_color))
                         else:
-                            # Melee units get the instant hit spark effect
                             self.attack_visual_effects.append({
                                 "pos": (target_pos_x, target_pos_y),
-                                "timer": config.FPS // 6, # Short duration (e.g., 10 frames)
-                                "color": config.YELLOW # Or a specific attack color
+                                "timer": config.FPS // 6,
+                                "color": config.YELLOW
                             })
 
-                        if target_b.is_destroyed(): # Check again after attack
-                            self.add_game_message(f"AI's {target_b.building_type_key} destroyed!", config.GREEN)
-                            # Unit's perform_attack already clears its own target if building is destroyed
+                        if attack_target.is_destroyed():
+                            if isinstance(attack_target, Building):
+                                self.add_game_message(f"{attack_target.owner}'s {attack_target.building_type_key} destroyed!", config.GREEN)
+                            else: # It's a Unit
+                                self.add_game_message(f"{attack_target.owner}'s {attack_target.unit_type_key} defeated!", config.ORANGE)
                 else:
                     unit.attack_cooldown -= 1
-
-        for unit in self.ai_units: unit.update_movement()
 
         # Update attack visual effects
         self.attack_visual_effects = [effect for effect in self.attack_visual_effects if effect["timer"] > 0]
@@ -369,14 +392,16 @@ class Game:
         for building_list in [self.buildings, self.ai_buildings]:
             destroyed_buildings = [b for b in building_list if b.is_destroyed()]
             for b in destroyed_buildings:
-                # Make sure the selected building is cleared if it's destroyed
                 if self.selected_building == b:
                     self.selected_building = None
                     self.unit_train_buttons.clear()
-
                 ruin = Ruin(b.x_grid, b.y_grid, b.building_type_key)
                 self.ruins.append(ruin)
                 building_list.remove(b)
+
+        # Remove destroyed units
+        self.units = [u for u in self.units if not u.is_destroyed()]
+        self.ai_units = [u for u in self.ai_units if not u.is_destroyed()]
 
 
     def render_text(self, text, x, y, surf=None, color=None, font=None): # ... (no change)
