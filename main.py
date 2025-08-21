@@ -3,7 +3,7 @@ import sys
 import os
 import config
 from game_map import GameMap
-from buildings import Building
+from buildings import Building, Ruin
 from units import Unit
 from projectiles import Projectile
 import assets
@@ -69,6 +69,7 @@ class Game:
         self.game_messages = []
         self.attack_visual_effects = [] # For hit sparks, etc.
         self.projectiles = []
+        self.ruins = []
 
 
         self.sounds = {}
@@ -129,10 +130,12 @@ class Game:
                 btn = Button(current_x, self.ui_panel_y_start + padding, button_width, button_height, button_text, action_key, self.font, tooltip_text_lines=tt_lines)
                 self.unit_train_buttons.append(btn); current_x += button_width + padding
 
-    def is_tile_empty_for_building(self, grid_x, grid_y): # ... (no change)
+    def is_tile_empty_for_building(self, grid_x, grid_y):
         if not (0 <= grid_x < config.MAP_WIDTH and 0 <= grid_y < config.MAP_HEIGHT): return False
         for b in self.buildings + self.ai_buildings:
             if b.x_grid == grid_x and b.y_grid == grid_y: return False
+        for r in self.ruins:
+            if r.x_grid == grid_x and r.y_grid == grid_y: return False
         return True
     def _create_sample_buildings(self): # ... (no change)
         self.place_building(3, 3, "town_hall", is_initial_sample=True)
@@ -360,7 +363,18 @@ class Game:
             if p.update():
                 self.projectiles.remove(p)
 
-        self.ai_buildings = [b for b in self.ai_buildings if not b.is_destroyed()]
+        # Handle destroyed buildings and create ruins
+        for building_list in [self.buildings, self.ai_buildings]:
+            destroyed_buildings = [b for b in building_list if b.is_destroyed()]
+            for b in destroyed_buildings:
+                # Make sure the selected building is cleared if it's destroyed
+                if self.selected_building == b:
+                    self.selected_building = None
+                    self.unit_train_buttons.clear()
+
+                ruin = Ruin(b.x_grid, b.y_grid, b.building_type_key)
+                self.ruins.append(ruin)
+                building_list.remove(b)
 
 
     def render_text(self, text, x, y, surf=None, color=None, font=None): # ... (no change)
@@ -371,6 +385,20 @@ class Game:
     def render(self):
         self.screen.fill(config.GREY)
         self.game_map.draw(self.screen, assets, self.tile_size, self.buildings + self.ai_buildings)
+
+        # Render ruins
+        for ruin in self.ruins:
+            ruin_sprite = assets.get_building_sprite(ruin.building_type_key, self.tile_size)
+            if ruin_sprite:
+                # Create a darkened version of the sprite
+                darkened_sprite = ruin_sprite.copy()
+                darkened_sprite.fill((60, 60, 60), special_flags=pygame.BLEND_RGB_MULT)
+
+                # Center the sprite on the tile
+                sw, sh = darkened_sprite.get_size()
+                ox, oy = (self.tile_size - sw) // 2, (self.tile_size - sh) // 2
+                draw_pos = (ruin.x_grid * self.tile_size + ox, ruin.y_grid * self.tile_size + oy)
+                self.screen.blit(darkened_sprite, draw_pos)
 
         for unit in self.units + self.ai_units:
             unit_sprite = assets.get_unit_sprite(unit.unit_type_key, self.tile_size)

@@ -44,3 +44,9 @@ if __name__ == '__main__':
     assert b.is_destroyed()
     print(b)
     print("Building class tests with damage passed.")
+
+class Ruin:
+    def __init__(self, x_grid, y_grid, building_type_key):
+        self.x_grid = x_grid
+        self.y_grid = y_grid
+        self.building_type_key = building_type_key
