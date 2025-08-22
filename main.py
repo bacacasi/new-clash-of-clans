@@ -463,6 +463,21 @@ class Game:
                 sprite_w, sprite_h = unit_sprite.get_size()
                 draw_pos = (int(unit.x - sprite_w // 2), int(unit.y - sprite_h // 2))
                 self.screen.blit(unit_sprite, draw_pos)
+
+                # Draw health bar for damaged units
+                if unit.health < unit.max_health:
+                    HEALTH_BAR_WIDTH = 30
+                    HEALTH_BAR_HEIGHT = 5
+                    health_percentage = unit.health / unit.max_health
+
+                    bar_x = unit.x - HEALTH_BAR_WIDTH // 2
+                    bar_y = draw_pos[1] - HEALTH_BAR_HEIGHT - 2 # Place it above the sprite
+
+                    # Background of the health bar (the "lost" health)
+                    pygame.draw.rect(self.screen, config.RED, (bar_x, bar_y, HEALTH_BAR_WIDTH, HEALTH_BAR_HEIGHT))
+                    # Foreground of the health bar (the "current" health)
+                    pygame.draw.rect(self.screen, config.GREEN, (bar_x, bar_y, int(HEALTH_BAR_WIDTH * health_percentage), HEALTH_BAR_HEIGHT))
+
                 if unit.selected:
                     selection_radius = max(sprite_w, sprite_h) // 2 + 4
                     pygame.draw.circle(self.screen, config.WHITE, (int(unit.x), int(unit.y)), selection_radius, 2)
