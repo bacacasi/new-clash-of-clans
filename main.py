@@ -71,6 +71,8 @@ class Game:
         self.projectiles = []
         self.ruins = []
 
+        # AI state
+        self.ai_under_attack = False
 
         self.sounds = {}
         self._load_sounds()
@@ -326,7 +328,31 @@ class Game:
             if not btn.rect.collidepoint(mouse_pos): btn.is_hovered = False
             btn.update_active_state(self.current_build_action)
 
+    def _handle_ai_logic(self):
+        if not self.ai_under_attack:
+            return
+
+        # Find an idle AI unit to command
+        idle_ai_unit = None
+        for unit in self.ai_units:
+            if not unit.attack_target_building and not unit.attack_target_unit:
+                idle_ai_unit = unit
+                break
+
+        # Find a player unit to target
+        player_target = None
+        if self.units:
+            player_target = self.units[0] # Simple targeting: attack the first player unit
+
+        if idle_ai_unit and player_target:
+            print(f"AI is retaliating! {idle_ai_unit.unit_type_key} is attacking Player's {player_target.unit_type_key}")
+            idle_ai_unit.attack_target_unit = player_target
+            idle_ai_unit.set_target(player_target.x, player_target.y, is_attack_move=True)
+            self.ai_under_attack = False # Reset the trigger
+
     def update(self):
+        self._handle_ai_logic()
+
         if self.feedback_effect: self.feedback_effect["timer"] -= 1
         if self.feedback_effect and self.feedback_effect["timer"] <= 0: self.feedback_effect = None
         new_messages = []
@@ -375,6 +401,10 @@ class Game:
                                 self.add_game_message(f"{attack_target.owner}'s {attack_target.building_type_key} destroyed!", config.GREEN)
                             else: # It's a Unit
                                 self.add_game_message(f"{attack_target.owner}'s {attack_target.unit_type_key} defeated!", config.ORANGE)
+
+                        # Trigger AI if one of its buildings is attacked by the player
+                        if unit.owner == "Player" and isinstance(attack_target, Building) and attack_target.owner == "AI":
+                            self.ai_under_attack = True
                 else:
                     unit.attack_cooldown -= 1
 
