@@ -531,6 +531,21 @@ class Game:
             tooltip_rect = self.active_tooltip_surface.get_rect(topleft=self.tooltip_render_pos)
             tooltip_rect.clamp_ip(self.screen.get_rect())
             self.screen.blit(self.active_tooltip_surface, tooltip_rect)
+
+        # Display selected building info
+        if self.selected_building:
+            info_key = self.selected_building.building_type_key
+            # Ensure the key exists to prevent errors
+            if info_key in self.BUILDING_INFO:
+                name = self.BUILDING_INFO[info_key]['name']
+                health_str = f"HP: {self.selected_building.health}/{self.selected_building.max_health}"
+
+                info_x = config.SCREEN_WIDTH - 220 # Position on the right side of the panel
+                info_y = self.ui_panel_y_start + 10
+
+                self.render_text(name, info_x, info_y)
+                self.render_text(health_str, info_x, info_y + 25)
+
         pygame.display.flip()
 
 if __name__ == '__main__':
