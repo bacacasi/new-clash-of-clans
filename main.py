@@ -518,11 +518,14 @@ class Game:
         pygame.draw.rect(self.screen, config.UI_BG_COLOR, (0, self.ui_panel_y_start, config.SCREEN_WIDTH, config.UI_PANEL_HEIGHT))
         active_buttons = self.unit_train_buttons if self.selected_building and self.BUILDING_INFO[self.selected_building.building_type_key].get("can_train_units") else self.ui_buttons
         for btn in active_buttons: btn.draw(self.screen)
-        res_y = self.ui_panel_y_start + (config.UI_PANEL_HEIGHT - config.DEFAULT_FONT_SIZE) // 2
+        res_y = self.ui_panel_y_start + 10
         player_res_str = f"Gold: {self.player_resources['gold']} | Elixir: {self.player_resources['elixir']}"
-        last_btn_right = active_buttons[-1].rect.right if active_buttons else 0; res_x = last_btn_right + 20
-        if not active_buttons or res_x + self.font.size(player_res_str)[0] > config.SCREEN_WIDTH -10: res_x = 10
-        self.render_text(player_res_str, res_x , res_y)
+        last_btn_right = active_buttons[-1].rect.right if active_buttons else 0
+        res_x = last_btn_right + 20
+
+        # Draw resource text and get its rect to position subsequent text
+        res_rect = self.render_text(player_res_str, res_x, res_y)
+
         message_y_offset = 10
         for i, msg_data in enumerate(self.game_messages):
             msg_surface = self.message_font.render(msg_data["text"], True, msg_data["color"])
@@ -543,11 +546,13 @@ class Game:
                 name = self.BUILDING_INFO[info_key]['name']
                 health_str = f"HP: {self.selected_building.health}/{self.selected_building.max_health}"
 
-                info_x = config.SCREEN_WIDTH - 220 # Position on the right side of the panel
-                info_y = self.ui_panel_y_start + 10
+                # Position info text to the right of the resource text
+                info_x = res_rect.right + 40
+                info_y_name = self.ui_panel_y_start + 10
+                info_y_health = info_y_name + 25
 
-                self.render_text(name, info_x, info_y)
-                self.render_text(health_str, info_x, info_y + 25)
+                self.render_text(name, info_x, info_y_name)
+                self.render_text(health_str, info_x, info_y_health)
 
         pygame.display.flip()
 
