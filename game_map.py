@@ -37,8 +37,8 @@ class GameMap:
                 selection_rect = pygame.Rect(pixel_x, pixel_y, tile_size, tile_size)
                 pygame.draw.rect(surface, config.CYAN, selection_rect, 3) # Cyan border, 3px thick
 
-            # Health bar (drawn on top of selection highlight if building is selected)
-            if hasattr(building, 'health') and hasattr(building, 'max_health'): # Check if building has health attrs
+            # Health bar for damaged buildings
+            if hasattr(building, 'health') and hasattr(building, 'max_health') and building.health < building.max_health:
                 bar_width = tile_size * 0.8
                 bar_height = 6
                 bar_offset_y = - (bar_height + 3)
@@ -47,15 +47,18 @@ class GameMap:
                 health_bar_y = pixel_y + bar_offset_y
 
                 if building.max_health > 0:
-                    health_ratio = max(0, min(1, building.health / building.max_health)) # Ensure ratio is between 0 and 1
+                    health_ratio = max(0, min(1, building.health / building.max_health))
                 else:
                     health_ratio = 0
 
                 current_health_width = bar_width * health_ratio
 
+                # Background (red)
                 pygame.draw.rect(surface, config.RED, (health_bar_x, health_bar_y, bar_width, bar_height))
+                # Foreground (green)
                 if current_health_width > 0:
                     pygame.draw.rect(surface, config.GREEN, (health_bar_x, health_bar_y, current_health_width, bar_height))
+                # Border
                 pygame.draw.rect(surface, config.BLACK, (health_bar_x, health_bar_y, bar_width, bar_height), 1)
 
 
