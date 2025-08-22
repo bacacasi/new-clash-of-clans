@@ -530,6 +530,19 @@ class Game:
             if unit_sprite:
                 sprite_w, sprite_h = unit_sprite.get_size()
                 draw_pos = (int(unit.x - sprite_w // 2), int(unit.y - sprite_h // 2))
+
+                # --- Team Indicator Circle ---
+                team_color = config.BLUE if unit.owner == "Player" else config.RED
+                circle_radius = sprite_w // 3
+                # Draw the circle slightly below the unit's center y-position
+                circle_center = (int(unit.x), int(unit.y) + sprite_h // 2 - circle_radius // 2)
+
+                # Create a separate surface for the transparent circle
+                circle_surface = pygame.Surface((circle_radius * 2, circle_radius * 2), pygame.SRCALPHA)
+                pygame.draw.circle(circle_surface, (*team_color, 100), (circle_radius, circle_radius), circle_radius)
+                self.screen.blit(circle_surface, (circle_center[0] - circle_radius, circle_center[1] - circle_radius))
+                # --- End Team Indicator ---
+
                 self.screen.blit(unit_sprite, draw_pos)
 
                 # Draw health bar for damaged units
