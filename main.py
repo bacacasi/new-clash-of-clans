@@ -318,6 +318,8 @@ class Game:
                                 unit.set_target(mouse_pos[0], mouse_pos[1], is_attack_move=False)
                     elif self.selected_building: self.selected_building.selected = False; self.selected_building = None; self.unit_train_buttons.clear()
             elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_f:
+                    pygame.display.toggle_fullscreen()
                 if event.key == pygame.K_ESCAPE:
                     if self.current_build_action: self.current_build_action = None; self.ghost_sprite = None
                     elif self.selected_building: self.selected_building.selected = False; self.selected_building = None; self.unit_train_buttons.clear()
