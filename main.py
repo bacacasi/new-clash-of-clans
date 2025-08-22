@@ -67,6 +67,12 @@ class Game:
         self.TOOLTIP_DELAY = config.FPS // 2
         self.tooltip_render_pos = (0,0)
 
+        self.game_phase = "preparation" # Can be "preparation" or "combat"
+        self.attack_button = Button(
+            x=config.SCREEN_WIDTH // 2 - 60, y=10, width=120, height=40,
+            text="Attaquer", action_key="start_combat", font=self.message_font
+        )
+
         self.game_messages = []
         self.attack_visual_effects = [] # For hit sparks, etc.
         self.projectiles = []
@@ -226,6 +232,14 @@ class Game:
         else: self.tooltip_timer = 0; self.active_tooltip_surface = None
         for event in pygame.event.get():
             if event.type == pygame.QUIT: self.is_running = False; return
+
+            if self.game_phase == "preparation":
+                action_result = self.attack_button.handle_event(event)
+                if action_result == "start_combat":
+                    self.game_phase = "combat"
+                    self.add_game_message("The battle has begun!", config.GREEN)
+                    return # Consume the event
+
             for btn in active_buttons:
                 action_result = btn.handle_event(event)
                 if action_result:
@@ -334,6 +348,9 @@ class Game:
         """
         A simple proactive AI. Idle AI units will find the closest player building and attack it.
         """
+        if self.game_phase != "combat":
+            return
+
         import math
 
         for unit in self.ai_units:
@@ -417,7 +434,7 @@ class Game:
             unit.update_movement()
 
             attack_target = unit.attack_target_building or unit.attack_target_unit
-            if attack_target and not unit.is_moving:
+            if self.game_phase == "combat" and attack_target and not unit.is_moving:
                 if unit.can_attack():
                     if unit.perform_attack(attack_target):
                         self._play_sound("unit_attack")
@@ -587,6 +604,9 @@ class Game:
 
                 self.render_text(name, info_x, info_y_name)
                 self.render_text(health_str, info_x, info_y_health)
+
+        if self.game_phase == "preparation":
+            self.attack_button.draw(self.screen)
 
         message_y_offset = 10
         for i, msg_data in enumerate(self.game_messages):
