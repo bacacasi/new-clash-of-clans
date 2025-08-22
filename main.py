@@ -543,14 +543,24 @@ class Game:
         # Display selected building info
         if self.selected_building:
             info_key = self.selected_building.building_type_key
-            # Ensure the key exists to prevent errors
             if info_key in self.BUILDING_INFO:
                 name = self.BUILDING_INFO[info_key]['name']
                 health_str = f"HP: {self.selected_building.health}/{self.selected_building.max_health}"
 
-                # Position info text to the right of the resource text
+                name_w, _ = self.font.size(name)
+                health_w, _ = self.font.size(health_str)
+                max_info_w = max(name_w, health_w)
+
+                # Position info text to the right of the resource text, if it fits
                 info_x = res_rect.right + 40
-                info_y_name = self.ui_panel_y_start + 10
+
+                # If it doesn't fit, move it below the resource text
+                if info_x + max_info_w > config.SCREEN_WIDTH - 10:
+                    info_x = res_rect.left
+                    info_y_name = res_rect.bottom + 5
+                else:
+                    info_y_name = self.ui_panel_y_start + 10
+
                 info_y_health = info_y_name + 25
 
                 self.render_text(name, info_x, info_y_name)
