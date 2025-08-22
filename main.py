@@ -522,27 +522,29 @@ class Game:
         for btn in active_buttons: btn.draw(self.screen)
 
         # --- Info/Resource Display ---
-        # This section now dynamically stacks building info and resources
+        # This section now renders building info above a fixed-position resource display.
         last_btn_right = active_buttons[-1].rect.right if active_buttons else 0
         info_x = last_btn_right + 20
-        current_info_y = self.ui_panel_y_start + 10
         line_height = self.font.get_height() + 5
 
-        # Display selected building info first, if any
+        # Fixed position for the resource text near the bottom of the panel
+        resource_y = self.ui_panel_y_start + config.UI_PANEL_HEIGHT - self.font.get_height() - 10
+        player_res_str = f"Gold: {self.player_resources['gold']} | Elixir: {self.player_resources['elixir']}"
+        self.render_text(player_res_str, info_x, resource_y)
+
+        # Display selected building info above the resource text, if any
         if self.selected_building:
             info_key = self.selected_building.building_type_key
             if info_key in self.BUILDING_INFO:
                 name = self.BUILDING_INFO[info_key]['name']
                 health_str = f"HP: {self.selected_building.health}/{self.selected_building.max_health}"
 
-                self.render_text(name, info_x, current_info_y)
-                current_info_y += line_height
-                self.render_text(health_str, info_x, current_info_y)
-                current_info_y += line_height
+                # Calculate positions by working upwards from the fixed resource_y
+                info_y_health = resource_y - line_height
+                info_y_name = info_y_health - line_height
 
-        # Display resources below the building info (or at the top if no building is selected)
-        player_res_str = f"Gold: {self.player_resources['gold']} | Elixir: {self.player_resources['elixir']}"
-        self.render_text(player_res_str, info_x, current_info_y)
+                self.render_text(name, info_x, info_y_name)
+                self.render_text(health_str, info_x, info_y_health)
 
         message_y_offset = 10
         for i, msg_data in enumerate(self.game_messages):
