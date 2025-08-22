@@ -51,6 +51,7 @@ class Game:
             "barbarian": {"cost": {"elixir": 25}, "asset_key": "barbarian", "display_name": "Barbarian", "required_building": "barracks", "health":50, "attack_power":10, "speed": 2.0, "attack_rate": 60, "attack_range": 1.5},
             "archer": {"cost": {"elixir": 50}, "asset_key": "archer", "display_name": "Archer", "required_building": "barracks", "health":30, "attack_power":7, "speed": 1.5, "attack_rate": 45, "attack_range": 4},
             "ai_barbarian": {"cost": {"elixir": 0}, "asset_key": "ai_barbarian", "display_name": "AI Barb", "required_building": "ai_barracks", "health":50, "attack_power":10, "speed": 2.0, "attack_rate": 60, "attack_range": 1.5},
+            "ai_archer": {"cost": {"elixir": 0}, "asset_key": "archer", "display_name": "AI Archer", "required_building": "ai_barracks", "health":30, "attack_power":7, "speed": 1.5, "attack_rate": 45, "attack_range": 4},
         }
 
         self.ui_buttons = []
@@ -357,6 +358,43 @@ class Game:
                     target_pos_y = closest_building.y_grid * self.tile_size + self.tile_size // 2
                     unit.set_target(target_pos_x, target_pos_y, is_attack_move=True)
 
+    def _spawn_ai_reinforcements(self):
+        import math
+        archer_details = self.UNIT_TRAINING_INFO.get("ai_archer")
+        if not archer_details:
+            return # AI Archer not defined
+
+        spawn_pos = self._get_spawn_position("AI")
+
+        # Find the closest player unit to target
+        closest_player_unit = None
+        min_dist = float('inf')
+        if not self.units:
+            return # No player units to target
+
+        for unit in self.units:
+            dist = math.hypot(spawn_pos[0] - unit.x, spawn_pos[1] - unit.y)
+            if dist < min_dist:
+                min_dist = dist
+                closest_player_unit = unit
+
+        if not closest_player_unit:
+            return # Should not happen if self.units is not empty, but as a safeguard
+
+        # Spawn 3 archers
+        for _ in range(3):
+            new_archer = Unit(spawn_pos[0], spawn_pos[1], archer_details["asset_key"], "AI",
+                              health=archer_details["health"],
+                              attack_power=archer_details["attack_power"],
+                              speed=archer_details["speed"],
+                              attack_rate=archer_details["attack_rate"],
+                              attack_range=archer_details["attack_range"])
+
+            new_archer.attack_target_unit = closest_player_unit
+            new_archer.set_target(closest_player_unit.x, closest_player_unit.y, is_attack_move=True)
+            self.ai_units.append(new_archer)
+
+
     def update(self):
         self._handle_ai_logic()
 
@@ -426,6 +464,10 @@ class Game:
         # Handle destroyed buildings and create ruins
         for building_list in [self.buildings, self.ai_buildings]:
             destroyed_buildings = [b for b in building_list if b.is_destroyed()]
+            if building_list is self.ai_buildings and len(destroyed_buildings) > 0:
+                self.add_game_message("The AI is sending reinforcements!", config.RED)
+                self._spawn_ai_reinforcements()
+
             for b in destroyed_buildings:
                 if self.selected_building == b:
                     self.selected_building = None
