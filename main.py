@@ -505,7 +505,11 @@ class Game:
 
     def render(self):
         self.screen.fill(config.GREY)
-        self.game_map.draw(self.screen, assets, self.tile_size, self.buildings + self.ai_buildings)
+
+        buildings_to_render = self.buildings[:]
+        if self.game_phase == "combat":
+            buildings_to_render.extend(self.ai_buildings)
+        self.game_map.draw(self.screen, assets, self.tile_size, buildings_to_render)
 
         # Render ruins
         for ruin in self.ruins:
