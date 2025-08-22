@@ -71,9 +71,6 @@ class Game:
         self.projectiles = []
         self.ruins = []
 
-        # AI state
-        self.ai_under_attack = False
-
         self.sounds = {}
         self._load_sounds()
         self._start_background_music()
@@ -329,26 +326,32 @@ class Game:
             btn.update_active_state(self.current_build_action)
 
     def _handle_ai_logic(self):
-        if not self.ai_under_attack:
-            return
+        """
+        A simple proactive AI. Idle AI units will find the closest player building and attack it.
+        """
+        import math
 
-        # Find an idle AI unit to command
-        idle_ai_unit = None
         for unit in self.ai_units:
+            # If the unit is idle, find a target
             if not unit.attack_target_building and not unit.attack_target_unit:
-                idle_ai_unit = unit
-                break
+                closest_building = None
+                min_dist = float('inf')
 
-        # Find a player unit to target
-        player_target = None
-        if self.units:
-            player_target = self.units[0] # Simple targeting: attack the first player unit
+                if not self.buildings: # No player buildings left to attack
+                    return
 
-        if idle_ai_unit and player_target:
-            print(f"AI is retaliating! {idle_ai_unit.unit_type_key} is attacking Player's {player_target.unit_type_key}")
-            idle_ai_unit.attack_target_unit = player_target
-            idle_ai_unit.set_target(player_target.x, player_target.y, is_attack_move=True)
-            self.ai_under_attack = False # Reset the trigger
+                for building in self.buildings:
+                    dist = math.hypot(unit.x - (building.x_grid * self.tile_size), unit.y - (building.y_grid * self.tile_size))
+                    if dist < min_dist:
+                        min_dist = dist
+                        closest_building = building
+
+                if closest_building:
+                    # print(f"AI unit {unit.unit_type_key} is now attacking {closest_building.building_type_key}") # Debug
+                    unit.attack_target_building = closest_building
+                    target_pos_x = closest_building.x_grid * self.tile_size + self.tile_size // 2
+                    target_pos_y = closest_building.y_grid * self.tile_size + self.tile_size // 2
+                    unit.set_target(target_pos_x, target_pos_y, is_attack_move=True)
 
     def update(self):
         self._handle_ai_logic()
@@ -402,9 +405,7 @@ class Game:
                             else: # It's a Unit
                                 self.add_game_message(f"{attack_target.owner}'s {attack_target.unit_type_key} defeated!", config.ORANGE)
 
-                        # Trigger AI if one of its buildings is attacked by the player
-                        if unit.owner == "Player" and isinstance(attack_target, Building) and attack_target.owner == "AI":
-                            self.ai_under_attack = True
+                        # (The old AI trigger logic is removed)
                 else:
                     unit.attack_cooldown -= 1
 
