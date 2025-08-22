@@ -590,6 +590,38 @@ class Game:
                     self.screen.blit(rotated_sword, sword_rect)
                 # --- End Sword Visual ---
 
+                # --- Archer Bow Attack Visual ---
+                if 'archer' in unit.unit_type_key and unit.attack_visual_timer > 0:
+                    attack_target = unit.attack_target_building or unit.attack_target_unit
+                    if attack_target:
+                        if isinstance(attack_target, Building):
+                            target_x, target_y = (attack_target.x_grid * self.tile_size + self.tile_size // 2,
+                                                  attack_target.y_grid * self.tile_size + self.tile_size // 2)
+                        else:
+                            target_x, target_y = attack_target.x, attack_target.y
+
+                        dx, dy = target_x - unit.x, target_y - unit.y
+                        angle_rad = math.atan2(-dy, dx)
+                        angle_deg = math.degrees(angle_rad)
+
+                        # Create bow surface
+                        bow_surf = pygame.Surface((20, 20), pygame.SRCALPHA)
+                        bow_rect = pygame.Rect(0, 0, 18, 18)
+                        # Wood part of the bow (brown arc)
+                        pygame.draw.arc(bow_surf, (139, 69, 19), bow_rect, math.radians(90), math.radians(270), 2)
+                        # Bow string (white line)
+                        pygame.draw.line(bow_surf, config.WHITE, (10, 0), (10, 18), 1)
+
+                        rotated_bow = pygame.transform.rotate(bow_surf, angle_deg)
+
+                        offset_distance = 10
+                        bow_x = unit.x + offset_distance * math.cos(angle_rad)
+                        bow_y = unit.y - offset_distance * math.sin(angle_rad)
+
+                        bow_draw_rect = rotated_bow.get_rect(center=(bow_x, bow_y))
+                        self.screen.blit(rotated_bow, bow_draw_rect)
+                # --- End Bow Visual ---
+
                 # Draw health bar for damaged units
                 if unit.health < unit.max_health:
                     HEALTH_BAR_WIDTH = 30

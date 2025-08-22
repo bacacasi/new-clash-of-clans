@@ -24,6 +24,7 @@ class Unit:
         self.attack_target_unit = None
         self.attack_cooldown = 0
         self.attack_rate = attack_rate
+        self.attack_visual_timer = 0 # For showing attack animation
         # Attack range, in tiles. Unit stops when distance to target is less than this.
         # The range is specified in tiles (e.g. 4 tiles) and converted to pixels here.
         self.effective_attack_range_check = self.attack_range * config.TILE_SIZE
@@ -44,6 +45,9 @@ class Unit:
             self.attack_target_unit = None
 
     def update_movement(self):
+        if self.attack_visual_timer > 0:
+            self.attack_visual_timer -= 1
+
         # If unit is attacking a dynamic target (a unit), update target coordinates
         if self.attack_target_unit:
             self.target_x = self.attack_target_unit.x
@@ -102,6 +106,7 @@ class Unit:
         # print(f"{self.owner}'s {self.unit_type_key} attacks target!") # Debug
         target.take_damage(self.attack_power)
         self.attack_cooldown = self.attack_rate # Reset cooldown
+        self.attack_visual_timer = 15 # Activate visual effect for 15 frames
 
         if target.is_destroyed():
             # print(f"Target destroyed by {self.unit_type_key}") # Debug
