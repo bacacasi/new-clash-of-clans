@@ -546,45 +546,41 @@ class Game:
 
                 self.screen.blit(unit_sprite, draw_pos)
 
-                # --- Barbarian Sword Attack Visual ---
-                if 'barbarian' in unit.unit_type_key and unit.attack_visual_timer > 0:
+                # --- Barbarian Sword Visual ---
+                if 'barbarian' in unit.unit_type_key:
+                    angle_deg = 0 # Default angle (points right)
+                    angle_rad = 0
+
+                    # If attacking, point sword at target
                     attack_target = unit.attack_target_building or unit.attack_target_unit
                     if attack_target:
-                        # Determine target coordinates
                         if isinstance(attack_target, Building):
                             target_x = attack_target.x_grid * self.tile_size + self.tile_size // 2
                             target_y = attack_target.y_grid * self.tile_size + self.tile_size // 2
                         else: # It's a Unit
                             target_x, target_y = attack_target.x, attack_target.y
 
-                        # Calculate angle
                         dx = target_x - unit.x
                         dy = target_y - unit.y
                         angle_rad = math.atan2(-dy, dx)
                         angle_deg = math.degrees(angle_rad)
 
-                        # Create sword surface
-                        sword_len = 20
-                        sword_height = 4
-                        hilt_len = 5
-                        hilt_height = 8
-                        sword_surf = pygame.Surface((sword_len + hilt_len, hilt_height), pygame.SRCALPHA)
+                    # Create sword surface (once, could be optimized)
+                    sword_len, sword_height = 20, 4
+                    hilt_len, hilt_height = 5, 8
+                    sword_surf = pygame.Surface((sword_len + hilt_len, hilt_height), pygame.SRCALPHA)
+                    pygame.draw.rect(sword_surf, config.GREY, (hilt_len, (hilt_height - sword_height)//2, sword_len, sword_height))
+                    pygame.draw.rect(sword_surf, (139, 69, 19), (0, 0, hilt_len, hilt_height))
 
-                        # Blade (grey)
-                        pygame.draw.rect(sword_surf, config.GREY, (hilt_len, (hilt_height - sword_height)//2, sword_len, sword_height))
-                        # Hilt (brown)
-                        pygame.draw.rect(sword_surf, (139, 69, 19), (0, 0, hilt_len, hilt_height))
+                    # Rotate and position
+                    rotated_sword = pygame.transform.rotate(sword_surf, angle_deg)
 
-                        # Rotate and position
-                        rotated_sword = pygame.transform.rotate(sword_surf, angle_deg)
+                    offset_distance = 15
+                    sword_x = unit.x + offset_distance * math.cos(angle_rad)
+                    sword_y = unit.y - offset_distance * math.sin(angle_rad)
 
-                        # Position sword to swing out from the unit's center
-                        offset_distance = 15
-                        sword_x = unit.x + offset_distance * math.cos(angle_rad)
-                        sword_y = unit.y - offset_distance * math.sin(angle_rad)
-
-                        sword_rect = rotated_sword.get_rect(center=(sword_x, sword_y))
-                        self.screen.blit(rotated_sword, sword_rect)
+                    sword_rect = rotated_sword.get_rect(center=(sword_x, sword_y))
+                    self.screen.blit(rotated_sword, sword_rect)
                 # --- End Sword Visual ---
 
                 # Draw health bar for damaged units
