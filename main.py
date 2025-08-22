@@ -569,7 +569,7 @@ class Game:
                     sword_surf = pygame.Surface((25, 10), pygame.SRCALPHA)
                     # Blade (as a tapered polygon)
                     blade_points = [(5, 0), (25, 3), (25, 7), (5, 10)]
-                    pygame.draw.polygon(sword_surf, config.GREY, blade_points)
+                    pygame.draw.polygon(sword_surf, (192, 192, 192), blade_points) # Silver color
                     # Crossguard
                     pygame.draw.rect(sword_surf, (139, 69, 19), (4, 0, 4, 10))
                     # Hilt
