@@ -254,8 +254,10 @@ class Game:
                     else:
                         if grid_y_mouse < config.MAP_HEIGHT:
                             newly_selected_building = None
-                            for b in self.buildings:
-                                if b.x_grid == grid_x_mouse and b.y_grid == grid_y_mouse: newly_selected_building = b; break
+                            for b in self.buildings + self.ai_buildings:
+                                if b.x_grid == grid_x_mouse and b.y_grid == grid_y_mouse:
+                                    newly_selected_building = b
+                                    break
                             if newly_selected_building:
                                 if self.selected_building: self.selected_building.selected = False
                                 for u in self.selected_units: u.selected = False; self.selected_units.clear()
