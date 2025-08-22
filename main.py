@@ -528,6 +528,33 @@ class Game:
         # Draw resource text and get its rect to position subsequent text
         res_rect = self.render_text(player_res_str, res_x, res_y)
 
+        # --- Selected Info Display ---
+        info_panel_x_start = config.SCREEN_WIDTH # A value that means 'no panel'
+        if self.selected_building:
+            info_key = self.selected_building.building_type_key
+            if info_key in self.BUILDING_INFO:
+                name = self.BUILDING_INFO[info_key]['name']
+                health_str = f"HP: {self.selected_building.health}/{self.selected_building.max_health}"
+
+                name_w, _ = self.font.size(name)
+                health_w, _ = self.font.size(health_str)
+                max_info_w = max(name_w, health_w)
+
+                # Fixed position for the info panel on the right
+                info_panel_x_start = config.SCREEN_WIDTH - max_info_w - 20
+                info_y_name = self.ui_panel_y_start + 10
+                info_y_health = info_y_name + 25
+
+                self.render_text(name, info_panel_x_start, info_y_name)
+                self.render_text(health_str, info_panel_x_start, info_y_health)
+
+        # If the resource text overlaps with the info panel, truncate it
+        if res_rect.right > info_panel_x_start:
+            res_str_short = f"Gold: {self.player_resources['gold']}"
+            # Redraw the resource text, overwriting the old one
+            pygame.draw.rect(self.screen, config.UI_BG_COLOR, res_rect) # Erase old text
+            self.render_text(res_str_short, res_x, res_y)
+
         message_y_offset = 10
         for i, msg_data in enumerate(self.game_messages):
             msg_surface = self.message_font.render(msg_data["text"], True, msg_data["color"])
@@ -539,32 +566,6 @@ class Game:
             tooltip_rect = self.active_tooltip_surface.get_rect(topleft=self.tooltip_render_pos)
             tooltip_rect.clamp_ip(self.screen.get_rect())
             self.screen.blit(self.active_tooltip_surface, tooltip_rect)
-
-        # Display selected building info
-        if self.selected_building:
-            info_key = self.selected_building.building_type_key
-            if info_key in self.BUILDING_INFO:
-                name = self.BUILDING_INFO[info_key]['name']
-                health_str = f"HP: {self.selected_building.health}/{self.selected_building.max_health}"
-
-                name_w, _ = self.font.size(name)
-                health_w, _ = self.font.size(health_str)
-                max_info_w = max(name_w, health_w)
-
-                # Position info text to the right of the resource text, if it fits
-                info_x = res_rect.right + 40
-
-                # If it doesn't fit, move it below the resource text
-                if info_x + max_info_w > config.SCREEN_WIDTH - 10:
-                    info_x = res_rect.left
-                    info_y_name = res_rect.bottom + 5
-                else:
-                    info_y_name = self.ui_panel_y_start + 10
-
-                info_y_health = info_y_name + 25
-
-                self.render_text(name, info_x, info_y_name)
-                self.render_text(health_str, info_x, info_y_health)
 
         pygame.display.flip()
 
