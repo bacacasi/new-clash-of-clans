@@ -565,15 +565,19 @@ class Game:
                         angle_rad = math.atan2(-dy, dx)
                         angle_deg = math.degrees(angle_rad)
 
-                    # Create an improved sword surface
-                    sword_surf = pygame.Surface((25, 10), pygame.SRCALPHA)
+                    # Create a final, more detailed sword surface
+                    sword_surf = pygame.Surface((28, 12), pygame.SRCALPHA)
                     # Blade (as a tapered polygon)
-                    blade_points = [(5, 0), (25, 3), (25, 7), (5, 10)]
+                    blade_points = [(8, 1), (27, 4), (27, 8), (8, 11)]
                     pygame.draw.polygon(sword_surf, (192, 192, 192), blade_points) # Silver color
+                    # Blade Glint
+                    pygame.draw.line(sword_surf, config.WHITE, (9, 5), (25, 5), 1)
                     # Crossguard
-                    pygame.draw.rect(sword_surf, (139, 69, 19), (4, 0, 4, 10))
+                    pygame.draw.rect(sword_surf, (139, 69, 19), (6, 0, 4, 12))
                     # Hilt
-                    pygame.draw.rect(sword_surf, (165, 42, 42), (0, 2, 5, 6))
+                    pygame.draw.rect(sword_surf, (165, 42, 42), (2, 3, 5, 6))
+                    # Pommel
+                    pygame.draw.circle(sword_surf, config.GREY, (2, 6), 3)
 
                     # Rotate and position
                     rotated_sword = pygame.transform.rotate(sword_surf, angle_deg)
